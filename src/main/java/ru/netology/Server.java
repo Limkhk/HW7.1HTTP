@@ -20,7 +20,7 @@ public class Server {
     public void start() {
         try (final var serverSocket = new ServerSocket(port)) {
             System.out.println("Запускаем сервер на порту " + port);
-            System.out.println("Открой в браузере http://localhost:" + port +"/");
+            System.out.println("Открой в браузере http://localhost:" + port + "/");
             while (true) {
                 final var socket = serverSocket.accept();
                 threadPool.execute(new RequestHandler(socket, validPaths));

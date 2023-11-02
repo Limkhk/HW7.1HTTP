@@ -18,6 +18,7 @@ public class RequestHandler implements Runnable {
         this.socket = socket;
         this.validPaths = validPaths;
     }
+
     @Override
     public void run() {
         try (
