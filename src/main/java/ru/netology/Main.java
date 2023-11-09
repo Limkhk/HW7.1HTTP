@@ -1,15 +1,27 @@
 package ru.netology;
 
-import java.util.List;
+import java.io.IOException;
 
 public class Main {
+    final static int PORT = 9999;
+    final static int TREAD_POOL = 64;
+
     public static void main(String[] args) {
-        final var validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+        Server server = new Server(PORT, TREAD_POOL);
+        server.addHandler("GET", "/messages", (request, responseStream) -> {
+            try {
+                server.handle(responseStream, "404", "Not Found");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
-        // Создаем экземпляр Server с 64 потоками
-        final var server = new Server(validPaths, 64, 9999);
+        server.addHandler("POST", "/messages", (request, responseStream) -> server.handle(responseStream, "503", "Service Unavailable"));
 
-        // Запуск сервера
+        server.addHandler("GET", "/", ((request, outputStream) -> server.defaultHandler(outputStream, "index.html")));
+        System.out.println("Запускаем сервер на порту " + PORT);
+        System.out.println("Открой в браузере http://localhost:" + PORT + "/");
         server.start();
+
     }
 }
