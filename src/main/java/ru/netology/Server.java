@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    private final int SOCKET;
+    private final int socket;
     private final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png",
             "/resources.html",
             "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
@@ -23,13 +23,13 @@ public class Server {
 
 
     public Server(int serverSocket, int poolSize) {
-        SOCKET = serverSocket;
+        socket = serverSocket;
         TREAD_POOL = Executors.newFixedThreadPool(poolSize);
         handlers = new ConcurrentHashMap<>();
     }
 
     void start() {
-        try (final var serverSocket = new ServerSocket(SOCKET)) {
+        try (final var serverSocket = new ServerSocket(socket)) {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 TREAD_POOL.execute(() -> proceedConnection(socket));
@@ -53,6 +53,11 @@ public class Server {
         try (final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
             final var requestLine = in.readLine();
+
+            if (requestLine == null || requestLine.isEmpty()) {
+                // just close socket
+                return;
+            }
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
@@ -123,14 +128,14 @@ public class Server {
     }
 
 
-
-    public void addHandler(String method, String path, Handler handler){
+    public void addHandler(String method, String path, Handler handler) {
         if (!handlers.containsKey(method)) {
             handlers.put(method, new HashMap<>());
         }
         handlers.get(method).put(path, handler);
 
     }
+
     public void handle(BufferedOutputStream responseOut, String responseCode, String responseStatus) throws IOException {
         responseOut.write((
                 "HTTP/1.1 " + responseCode + " " + responseStatus + "\r\n" +
