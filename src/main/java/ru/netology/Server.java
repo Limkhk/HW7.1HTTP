@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    private final int SOCKET;
+    private final int socket;
     private final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png",
             "/resources.html",
             "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
@@ -23,13 +23,13 @@ public class Server {
 
 
     public Server(int serverSocket, int poolSize) {
-        SOCKET = serverSocket;
+        socket = serverSocket;
         TREAD_POOL = Executors.newFixedThreadPool(poolSize);
         handlers = new ConcurrentHashMap<>();
     }
 
     void start() {
-        try (final var serverSocket = new ServerSocket(SOCKET)) {
+        try (final var serverSocket = new ServerSocket(socket)) {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 TREAD_POOL.execute(() -> proceedConnection(socket));
@@ -41,9 +41,9 @@ public class Server {
         }
     }
 
-    private Request createRequest(String method, String path) {
+    private Request createRequest(String method, String path, Map<String, String> queryParams) {
         if (method != null && !method.isBlank()) {
-            return new Request(method, path);
+            return new Request(method, path, queryParams);
         } else {
             return null;
         }
@@ -53,6 +53,11 @@ public class Server {
         try (final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
             final var requestLine = in.readLine();
+
+            if (requestLine == null || requestLine.isEmpty()) {
+                // just close socket
+                return;
+            }
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
@@ -61,8 +66,12 @@ public class Server {
             }
 
             String method = parts[0];
-            final var path = parts[1];
-            Request request = createRequest(method, path);
+            final var fullPath = parts[1];
+            int queryIndex = fullPath.indexOf('?');
+            String path = (queryIndex != -1) ? fullPath.substring(0, queryIndex) : fullPath;
+            Map<String, String> queryParams = parseQueryParams((queryIndex != -1) ? fullPath.substring(queryIndex + 1) : "");
+
+            Request request = createRequest(method, path, queryParams);
 
             if (request == null || !handlers.containsKey(request.getMethod())) {
                 handle(out, "400", "Bad Request");
@@ -85,6 +94,20 @@ public class Server {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Map<String, String> parseQueryParams(String queryString) {
+        Map<String, String> queryParams = new HashMap<>();
+        String[] pairs = queryString.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0];
+                String value = keyValue[1];
+                queryParams.put(key, value);
+            }
+        }
+        return queryParams;
     }
 
     void defaultHandler(BufferedOutputStream out, String path) throws IOException {
@@ -123,14 +146,14 @@ public class Server {
     }
 
 
-
-    public void addHandler(String method, String path, Handler handler){
+    public void addHandler(String method, String path, Handler handler) {
         if (!handlers.containsKey(method)) {
             handlers.put(method, new HashMap<>());
         }
         handlers.get(method).put(path, handler);
 
     }
+
     public void handle(BufferedOutputStream responseOut, String responseCode, String responseStatus) throws IOException {
         responseOut.write((
                 "HTTP/1.1 " + responseCode + " " + responseStatus + "\r\n" +

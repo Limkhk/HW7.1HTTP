@@ -9,6 +9,8 @@ public class Main {
     public static void main(String[] args) {
         Server server = new Server(PORT, TREAD_POOL);
         server.addHandler("GET", "/messages", (request, responseStream) -> {
+            String paramValue = request.getQueryParam("param");
+            System.out.println("Получен запрос GET с параметром: " + paramValue);
             try {
                 server.handle(responseStream, "404", "Not Found");
             } catch (IOException e) {

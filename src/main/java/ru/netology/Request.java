@@ -1,16 +1,27 @@
 package ru.netology;
 
+import java.util.Map;
+
 public class Request {
     private final String method;
     private final String path;
-    public Request(String method, String path) {
+    private final Map<String, String> queryParams;
+
+    public Request(String method, String path, Map<String, String> queryParams) {
         this.method = method;
         this.path = path;
+        this.queryParams = queryParams;
     }
+
     public String getMethod() {
         return method;
     }
+
     public String getPath() {
         return path;
+    }
+
+    public String getQueryParam(String name) {
+        return queryParams.get(name);
     }
 }
