@@ -41,9 +41,9 @@ public class Server {
         }
     }
 
-    private Request createRequest(String method, String path) {
+    private Request createRequest(String method, String path, Map<String, String> queryParams) {
         if (method != null && !method.isBlank()) {
-            return new Request(method, path);
+            return new Request(method, path, queryParams);
         } else {
             return null;
         }
@@ -66,8 +66,12 @@ public class Server {
             }
 
             String method = parts[0];
-            final var path = parts[1];
-            Request request = createRequest(method, path);
+            final var fullPath = parts[1];
+            int queryIndex = fullPath.indexOf('?');
+            String path = (queryIndex != -1) ? fullPath.substring(0, queryIndex) : fullPath;
+            Map<String, String> queryParams = parseQueryParams((queryIndex != -1) ? fullPath.substring(queryIndex + 1) : "");
+
+            Request request = createRequest(method, path, queryParams);
 
             if (request == null || !handlers.containsKey(request.getMethod())) {
                 handle(out, "400", "Bad Request");
@@ -90,6 +94,20 @@ public class Server {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Map<String, String> parseQueryParams(String queryString) {
+        Map<String, String> queryParams = new HashMap<>();
+        String[] pairs = queryString.split("&");
+        for (String pair : pairs) {
+            String[] keyValue = pair.split("=");
+            if (keyValue.length == 2) {
+                String key = keyValue[0];
+                String value = keyValue[1];
+                queryParams.put(key, value);
+            }
+        }
+        return queryParams;
     }
 
     void defaultHandler(BufferedOutputStream out, String path) throws IOException {
